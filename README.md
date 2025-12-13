@@ -151,6 +151,25 @@ Follow the on-screen prompts to input coordinates (e.g., X: 7, Y: -0.15).
 ros2 run rqt_image_view rqt_image_view
 ```
 
+
+# Bonus
+You can run the drone mission in Manual Mode to command the drone via QGroundControl and after the script take care of sending the right coordinates. 
+
+**Terminal 5**
+```bash
+=================================================
+
+   DRONE MISSION CONTROL CENTER
+
+=================================================
+
+Select Mode:
+
+ [1] AUTO MODE   
+
+ [2] MANUAL MODE 
+>>> Select (1/2): 2 
+```
 ---
 
 ## 🛠 Fault Injection & Repair
@@ -178,3 +197,4 @@ ros2 service call /rover_1/set_health std_srvs/srv/SetBool "{data: true}"
 ```bash
 ros2 service call /rover_emergency/set_health std_srvs/srv/SetBool "{data: false}"
 ```
+README(1).md
