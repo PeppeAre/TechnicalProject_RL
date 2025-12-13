@@ -197,4 +197,3 @@ ros2 service call /rover_1/set_health std_srvs/srv/SetBool "{data: true}"
 ```bash
 ros2 service call /rover_emergency/set_health std_srvs/srv/SetBool "{data: false}"
 ```
-README(1).md
