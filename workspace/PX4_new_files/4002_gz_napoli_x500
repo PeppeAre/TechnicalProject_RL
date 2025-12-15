@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# @name My Custom x500
+#
+# @type Quadrotor x
+# @class Copter
+#
+
+. ${R}etc/init.d-posix/airframes/4001_gz_x500
+
+# Sovrascriviamo il nome del modello visivo da caricare in Gazebo
+PX4_SIM_MODEL=napoli_x500
