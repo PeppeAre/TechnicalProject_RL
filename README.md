@@ -82,14 +82,14 @@ rosdep install -r --from-paths src -i -y --rosdistro humble
 Copy the custom model SDF (with the project logo/physics) to the PX4 directory:
 
 ```bash
-# Backup original model
-cp ~/PX4-Autopilot/Tools/simulation/gz/models/x500_base/model.sdf ~/PX4-Autopilot/Tools/simulation/gz/models/x500_base/model_backup.sdf
+cp -r ~/workspace/PX4_new_files/napoli_x500  ~/PX4-Autopilot/Tools/simulation/gz/models/
+cp ~/workspace/PX4_new_files/4002_gz_napoli_x500  ~/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/
+```
 
-# Remove the model.sdf
-rm ~/PX4-Autopilot/Tools/simulation/gz/models/x500_base/model.sdf
+Remind to add the new airframes in the CMakeLists.txt with this command
 
-# Copy project model (assuming model.sdf is in workspace root)
-cp ~/workspace/model.sdf ~/PX4-Autopilot/Tools/simulation/gz/models/x500_base/
+```bash
+sed -i '/4001_gz_x500/a\4002_gz_napoli_x500' ~/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/CMakeLists.txt
 ```
 
 ### 5. Build the Workspace
@@ -109,7 +109,7 @@ Open separate terminals (using `./join.sh`) and run the following commands in th
 
 ```bash
 cd ~/PX4-Autopilot
-make px4_sitl gz_x500
+make px4_sitl gz_napoli_x500
 ```
 
 **Terminal 2: Spawn World and Rovers**
