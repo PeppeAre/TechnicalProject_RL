@@ -219,5 +219,32 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
                 self.current_state = STATE_AVOID_MOVE
                 self.maneuver_counter = 0
 
-        elif self.current_state == STATE_AVOID_MOVE:  # Avanza dopo turno
-            msg.linear
+        elif self.current_state == STATE_AVOID_MOVE:  # Avanza
+            msg.linear.x = 0.5 
+            msg.angular.z = 0.0 # Vai dritto
+            
+            self.maneuver_counter += 1
+            # Torna alla guida normale se tempo scaduto o se incontra nuovo ostacolo
+            if self.maneuver_counter >= self.move_steps or self.min_front < 1.0:
+                self.current_state = STATE_GO_TO_GOAL
+                self.maneuver_counter = 0
+
+        # Pubblica il comando calcolato ai motori
+        self.cmd_vel_pub.publish(msg)
+
+# --- ENTRY POINT DEL PROGRAMMA ---
+def main(args=None):
+    rclpy.init(args=args) # Inizializza ROS2
+    # Crea il nodo
+    controller = RoverController('rover_1')
+    
+    try:
+        rclpy.spin(controller) # Mantiene il nodo attivo
+    except KeyboardInterrupt:
+        pass # Gestisce CTRL+C
+    finally:
+        # Spegni i motori prima di chiudere
+        stop_msg = Twist()
+        controller.cmd_vel_pub.publish(stop_msg)
+        controller.destroy_node()
+        rclpy.shutdown()
