@@ -1,14 +1,14 @@
-import rclpy  # Importa il client ROS2 per Python
-from rclpy.node import Node  # Classe base per creare nodi ROS2
-from rclpy.executors import MultiThreadedExecutor  # Permette di eseguire più nodi in parallelo
+import rclpy  
+from rclpy.node import Node  
+from rclpy.executors import MultiThreadedExecutor 
 from geometry_msgs.msg import Twist, Point  # Twist per comandi di velocità, Point per target
 from nav_msgs.msg import Odometry  # Per ricevere la posizione del robot
 from sensor_msgs.msg import LaserScan  # Per ricevere dati del LiDAR
-from std_msgs.msg import String  # Messaggi di stato
-from std_srvs.srv import SetBool  # Servizio booleano per gestire la salute
-from tf_transformations import euler_from_quaternion  # Conversione da quaternion a angoli Euler
-import math  # Operazioni matematiche
-import threading  # Non utilizzato nel codice finale ma importato
+from std_msgs.msg import String  
+from std_srvs.srv import SetBool  # Servizio booleano per gestire health
+from tf_transformations import euler_from_quaternion  # Conversione da quaternion a angoli Eulero
+import math  
+import threading  
 
 # Stati della macchina a stati del rover
 STATE_IDLE = 0  # In attesa
@@ -20,9 +20,9 @@ STATE_TARGET_REACHED = 5  # Arrivato al target
 STATE_BROKEN = 99  # Stato guasto
 
 class RoverController(Node):  # Definisce la classe del controller del Rover
-    def __init__(self, robot_name_input):  # Costruttore
-        super().__init__(f'{robot_name_input}_controller')  # Nome del nodo
-        self.robot_name = robot_name_input  # Salva il nome del robot
+    def __init__(self, robot_name_input):  
+        super().__init__(f'{robot_name_input}_controller') 
+        self.robot_name = robot_name_input  
         base_topic = f'/{self.robot_name}'  # Base dei topic
 
         # Sottoscrizioni ai topic
@@ -38,11 +38,11 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
         # Posizione e orientamento attuali del robot
         self.x = 0.0
         self.y = 0.0
-        self.yaw = 0.0  # Orientamento in rad
-        self.target_x = None  # Posizione target X
-        self.target_y = None  # Posizione target Y
-        self.is_healthy = True  # Stato del robot
-        self.last_status_published = ""  # Ultimo messaggio stato
+        self.yaw = 0.0  
+        self.target_x = None  
+        self.target_y = None  
+        self.is_healthy = True  
+        self.last_status_published = "" 
 
         # Sensori LiDAR - valori minimi nelle direzioni
         self.min_front = 10.0
@@ -51,10 +51,10 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
         self.too_close = False  # Troppo vicino a un ostacolo
 
         # Parametri di tuning
-        self.trigger_dist = 0.65  # Distanza per innescare avoidance
-        self.side_safe_dist = 1.0  # Distanza minima dai muri laterali
-        self.critical_dist = 0.35  # Distanza di emergenza
-        self.max_speed = 1.5  # Velocità massima
+        self.trigger_dist = 0.65  
+        self.side_safe_dist = 1.0  
+        self.critical_dist = 0.35  
+        self.max_speed = 1.5  
 
         # Stato iniziale del rover
         self.current_state = STATE_IDLE
@@ -69,13 +69,13 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
         self.timer = self.create_timer(0.1, self.control_loop)  # Loop di controllo (10 Hz)
 
         msg = String()
-        msg.data = "OK"  # Stato iniziale
+        msg.data = "OK"  
         self.status_pub.publish(msg)
-        self.get_logger().info(f">>> {self.robot_name} READY!.")  # Log iniziale
+        self.get_logger().info(f">>> {self.robot_name} READY!.")  
 
-    def set_health_callback(self, request, response):  # Servizio di salute
-        if request.data:  # Richiesta di riparazione
-            if not self.is_healthy:  # Se era rotto
+    def set_health_callback(self, request, response):  # Servizio health
+        if request.data:  
+            if not self.is_healthy:  
                 self.is_healthy = True
                 self.current_state = STATE_IDLE  # Torna idle
                 self.target_x = None
@@ -86,7 +86,7 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
                 self.is_healthy = False
                 self.current_state = STATE_BROKEN
                 self.get_logger().warn("!!! BROKEN !!!")
-        response.success = True  # Risposta positiva
+        response.success = True  
         return response
 
     def target_callback(self, msg):  # Callback del target
@@ -103,7 +103,7 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
         rot_q = msg.pose.pose.orientation  # Quaternion orientamento
-        (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])  # Conversione Euler
+        (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])  # Conversione Eulero
         self.yaw = theta  # Salva yaw
 
     def scan_callback(self, msg):  # Callback LiDAR
@@ -117,10 +117,13 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
             end = min(len(ranges), int(end))
             for i in range(start, end):
                 r = ranges[i]
+                # Filtriamo 'inf' e valori troppo piccoli (rumore)
                 if not math.isinf(r) and r > 0.05 and r < m:
                     m = r
             return m
 
+        # Il Lidar ha 360 campioni. Indice 0 = destra, 180 = centro, 360 = sinistra
+        
         center = len(ranges) / 2  # Angolo zero del LiDAR
         width = 30  # +/- 30° frontali
 
@@ -132,12 +135,15 @@ class RoverController(Node):  # Definisce la classe del controller del Rover
 
         self.too_close = (self.min_front < self.critical_dist)  # Emergenza
 
-    def normalize_angle(self, angle):  # Normalizza angolo [-pi, pi]
+    def normalize_angle(self, angle):  # Normalizza angolo [-pi, pi] (per errori di heading)
         while angle > math.pi: angle -= 2*math.pi
         while angle < -math.pi: angle += 2*math.pi
         return angle
 
     def control_loop(self):  # Loop di controllo
+        # 1. Pubblicazione Stato (Heartbeat)
+        # Lo facciamo ogni 20 cicli (0.5Hz) per non saturare la rete
+        self.log_counter += 1
         self.log_counter += 1
         if self.log_counter >= 20:  # Ogni 2 secondi
             msg_status = String()
