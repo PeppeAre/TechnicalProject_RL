@@ -54,7 +54,8 @@ class DroneMission(Node):
         self.mission_started = False  # Interruttore principale per inviare ai rover
         self.manual_mode = False      # Se True, non inviamo setpoint al drone, ma gestiamo i rover
 
-        # Timer Antirimbalzo Status (Debounce)
+        # Per evitare che un falso contatto sensore faccia saltare continuamente lo stato
+        # aspettiamo che l'errore persista per 'debounce' secondi.
         self.last_r1_change = 0.0
         self.last_r2_change = 0.0
         self.debounce = 2.0
@@ -262,18 +263,24 @@ class DroneMission(Node):
 
         # A) LOGICA VOLO DRONE (Solo se in AUTO)
         if not self.manual_mode:
+            #Pubblica sempre altrimenti PX4 esce da Offboard
             self.publish_offboard_control_mode()
             self.publish_trajectory_setpoint(self.target_x, self.target_y, self.target_z)
             
+            # PX4 richiede di ricevere setpoint per un po' PRIMA di accettare il cambio modo.
             if self.offboard_setpoint_counter_ == 10:
+                # Imposta modalità Offboard
                 self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)
+                # Arma i motori
                 self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
             
-            # Check arrivo
+            # Controllo Arrivo al Target
+            # Calcoliamo distanza euclidea 2D
             curr_x = self.current_position[1]
             curr_y = self.current_position[0]
             dist = math.sqrt((self.target_x - curr_x)**2 + (self.target_y - curr_y)**2)
 
+            # Se siamo vicini (< 0.5m) consideriamo il drone arrivato
             if dist < 0.5 and not self.drone_arrived and self.offboard_setpoint_counter_ > 200:
                 self.drone_arrived = True 
 
@@ -294,6 +301,7 @@ class DroneMission(Node):
                 ty = float(self.target_y)
                 target_msg = Point(x=tx, y=ty, z=0.0)
                 
+                # Switch Logico: Inviamo solo al rover attivo
                 if self.mission_active_rover == 1 and not self.r1_broken:
                     self.r1_target_pub.publish(target_msg)
                 elif self.mission_active_rover == 2 and not self.r2_broken:
